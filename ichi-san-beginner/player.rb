@@ -1,8 +1,12 @@
 class Player
   def play_turn(warrior)
     @warrior = warrior
+    @look = warrior.look
 
-    if warrior.feel.wall?
+    if incoming_enemy?
+      warrior.shoot!
+
+    elsif warrior.feel.wall?
       warrior.pivot!
 
     elsif below_health_threshold?
@@ -10,11 +14,8 @@ class Player
         warrior.rest!
 
       elsif under_attack?
-        if see_nobody? && @warrior.health < 10
+        if see_nobody?
           warrior.walk! :backward
-
-        elsif see_nobody?
-          warrior.walk!
 
         elsif warrior.feel.captive?
           warrior.rescue!
@@ -39,6 +40,10 @@ class Player
   end
 
   private
+  def incoming_enemy?
+    @look[1].enemy? && !@look[0].captive?
+  end
+
   def suffering?
     under_attack? || below_health_threshold?
   end
