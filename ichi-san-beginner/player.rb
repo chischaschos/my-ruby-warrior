@@ -1,72 +1,61 @@
 class Player
-
-  @@health = []
-  @@current_health = 0
-  @@pending_actions = []
-  @@turn_count = 0
-
-  attr_accessor :warrior
-
-  def warrior=(warrior)
-    @warrior = warrior
-    @@turn_count += 1
-    keep_health
-  end
-
   def play_turn(warrior)
-  
-    self.warrior = warrior
+    @warrior = warrior
 
-    if !@@pending_actions.empty?
-      do_pending_actions!
-    elsif warrior.feel.wall?
+    if warrior.feel.wall?
       warrior.pivot!
-    elsif warrior.feel.enemy?
-      if @@current_health < 50
-        scape_and_rest
-      else 
-        warrior.attack!
+
+    elsif below_health_threshold?
+      if !under_attack?
+        warrior.rest!
+
+      elsif under_attack?
+        if see_nobody? && @warrior.health < 10
+          warrior.walk! :backward
+
+        elsif see_nobody?
+          warrior.walk!
+
+        elsif warrior.feel.captive?
+          warrior.rescue!
+
+        else
+          warrior.attack!
+
+        end
       end
+    elsif see_nobody?
+      warrior.walk!
+
     elsif warrior.feel.captive?
       warrior.rescue!
+
     else
-      warrior.walk!
+      warrior.attack!
+
     end
 
+    @health = warrior.health
   end
 
   private
-
-  def do_pending_actions!
-    instance_eval(@@pending_actions.pop)
-  end  
-
-  def scape_and_rest
-    p "Scape and rest!"
-    if under_attack?
-      @warrior.walk! :backward
-      @@pending_actions.push 'scape_and_rest'
-    elsif below_health?
-      @warrior.rest!
-      @@pending_actions.push 'scape_and_rest'
-    end
+  def suffering?
+    under_attack? || below_health_threshold?
   end
 
-  def below_health?
-    @@current_health < 90
+  def below_health_threshold?
+    @warrior.health < 18
   end
 
   def under_attack?
-    if @@turn_count == 1
-      return false
-    else
-      @@health[-2] > @@health[-1]
-    end
-  end 
-
-  def keep_health
-    @@health << @warrior.health
-    @@current_health = @warrior.health.quo(@@health.first) * 100
+    @warrior.health < (@health || 0)
   end
 
+  def safe?
+    !under_attack? && see_nobody?
+  end
+
+  def see_nobody?
+    @warrior.feel.empty?
+  end
 end
